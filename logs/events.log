@@ -1,0 +1,28 @@
+2025-11-03 20:13:07,742 INFO Daemon started, socket ready
+2025-11-03 20:13:11,044 INFO RX {'type': 'player.next', 'ts': 1762197191.042839}
+2025-11-03 20:13:11,926 INFO RX {'type': 'player.next', 'ts': 1762197191.925726}
+2025-11-03 20:13:12,601 INFO RX {'type': 'player.next', 'ts': 1762197192.5990083}
+2025-11-03 20:13:13,314 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762197193.3131442}
+2025-11-03 20:13:13,814 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197193.8137336}
+2025-11-03 20:13:14,315 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197194.3141992}
+2025-11-03 20:13:14,818 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197194.816657}
+2025-11-03 20:13:15,323 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197195.3216262}
+2025-11-03 20:13:15,828 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197195.8266575}
+2025-11-03 20:13:16,331 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197196.3305745}
+2025-11-03 20:13:16,364 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762197196.3633752}
+2025-11-03 20:13:28,076 INFO Daemon stopped
+2025-11-03 20:20:56,480 INFO Daemon started, socket ready
+2025-11-03 20:21:00,509 INFO RX {'type': 'player.next', 'ts': 1762197660.507638}
+2025-11-03 20:21:01,973 INFO RX {'type': 'player.next', 'ts': 1762197661.9728284}
+2025-11-03 20:21:02,931 INFO RX {'type': 'player.next', 'ts': 1762197662.930699}
+2025-11-03 20:21:03,473 INFO RX {'type': 'player.next', 'ts': 1762197663.4724348}
+2025-11-03 20:21:04,084 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762197664.0834832}
+2025-11-03 20:21:04,594 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197664.5931258}
+2025-11-03 20:21:04,830 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762197664.829116}
+2025-11-03 20:21:08,874 INFO RX {'type': 'player.next', 'ts': 1762197668.8734388}
+2025-11-03 20:21:09,926 INFO RX {'type': 'player.next', 'ts': 1762197669.9251254}
+2025-11-03 20:21:10,883 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762197670.8820076}
+2025-11-03 20:21:11,389 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197671.3878922}
+2025-11-03 20:21:11,894 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197671.8935885}
+2025-11-03 20:21:12,403 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197672.401829}
+2025-11-03 20:21:12,641 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762197672.6398275}
