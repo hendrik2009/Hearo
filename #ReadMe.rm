@@ -7,7 +7,8 @@ sudo nano /etc/systemd/system/hearo-event-daemon.service
 
 Start Daemons:
 sudo systemctl start hearo-event-daemon
-
+sudo systemctl start hearo-buttons-listener.service
 
 Stop Daemons:
 sudo systemctl stop hearo-event-daemon
+sudo systemctl stop hearo-buttons-listener.service
