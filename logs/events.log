@@ -26,3 +26,44 @@
 2025-11-03 20:21:11,894 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197671.8935885}
 2025-11-03 20:21:12,403 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197672.401829}
 2025-11-03 20:21:12,641 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762197672.6398275}
+2025-11-03 21:50:52,776 INFO Daemon started, socket ready
+2025-11-03 21:52:16,582 INFO RX {'type': 'player.prev', 'ts': 1762203136.5733197}
+2025-11-03 21:52:19,432 INFO RX {'type': 'player.next', 'ts': 1762203139.4315522}
+2025-11-03 21:52:31,335 INFO RX {'type': 'button.pressed_start', 'button': 'Btn reset', 'ts': 1762203151.3341184}
+2025-11-03 21:52:34,898 INFO RX {'type': 'button.pressed_end', 'button': 'Btn reset', 'ts': 1762203154.897158}
+2025-11-03 21:52:39,663 INFO RX {'type': 'button.pressed_start', 'button': 'Btn reset', 'ts': 1762203159.6622145}
+2025-11-03 21:52:46,062 INFO RX {'type': 'system.reset', 'ts': 1762203166.0616121}
+2025-11-03 21:52:53,511 INFO RX {'type': 'player.next', 'ts': 1762203173.5096712}
+2025-11-03 21:52:56,964 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762203176.963091}
+2025-11-03 21:52:57,471 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203177.4698071}
+2025-11-03 21:52:57,978 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203177.9768338}
+2025-11-03 21:52:58,486 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203178.485229}
+2025-11-03 21:52:58,995 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203178.9938102}
+2025-11-03 21:52:59,503 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203179.502335}
+2025-11-03 21:53:00,010 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203180.0088286}
+2025-11-03 21:53:00,190 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762203180.1895297}
+2025-11-03 21:53:01,723 INFO RX {'type': 'button.pressed_start', 'button': 'Btn B', 'ts': 1762203181.722235}
+2025-11-03 21:53:02,224 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203182.2233171}
+2025-11-03 21:53:02,725 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203182.7243257}
+2025-11-03 21:53:03,226 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203183.225409}
+2025-11-03 21:53:03,730 INFO RX {'type': 'button.pressed_end', 'button': 'Btn B', 'ts': 1762203183.7291965}
+2025-11-03 21:53:06,092 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203186.090834}
+2025-11-03 21:53:08,164 INFO RX {'type': 'button.pressed_start', 'button': 'Btn D', 'ts': 1762203188.163815}
+2025-11-03 21:53:08,166 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203188.1652822}
+2025-11-03 21:53:08,473 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203188.4725368}
+2025-11-03 21:53:08,782 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203188.7815335}
+2025-11-03 21:53:09,083 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.0826273}
+2025-11-03 21:53:09,384 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.382796}
+2025-11-03 21:53:09,695 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.6942294}
+2025-11-03 21:53:09,996 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.9951298}
+2025-11-03 21:53:10,019 INFO RX {'type': 'button.pressed_end', 'button': 'Btn D', 'ts': 1762203190.017822}
+2025-11-03 21:53:10,966 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203190.9648397}
+2025-11-03 21:53:14,153 INFO RX {'type': 'button.pressed_start', 'button': 'Btn C', 'ts': 1762203194.1524785}
+2025-11-03 21:53:14,155 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203194.154221}
+2025-11-03 21:53:14,455 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203194.4544792}
+2025-11-03 21:53:14,756 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203194.755007}
+2025-11-03 21:53:15,066 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.0652025}
+2025-11-03 21:53:15,366 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.3656807}
+2025-11-03 21:53:15,677 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.675849}
+2025-11-03 21:53:15,977 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.9761484}
+2025-11-03 21:53:16,040 INFO RX {'type': 'button.pressed_end', 'button': 'Btn C', 'ts': 1762203196.0393152}

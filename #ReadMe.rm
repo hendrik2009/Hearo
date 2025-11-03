@@ -1,0 +1,13 @@
+Hearo - A Hardware musicplayer for Spotify
+
+
+Edit Systemd entries:
+sudo nano /etc/systemd/system/hearo-event-daemon.service
+
+
+Start Daemons:
+sudo systemctl start hearo-event-daemon
+
+
+Stop Daemons:
+sudo systemctl stop hearo-event-daemon

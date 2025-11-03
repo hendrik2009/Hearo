@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# buttons_4_daemon_spec.py — libgpiod 1.x, Prints-Flag + Daemon-Events nach Hearo-Spec
+# Hearo Button Listener supports the hardware buttons via gpio
 import gpiod, time, socket, json, os
 
 CHIP = "gpiochip0"
@@ -24,6 +23,7 @@ BUTTONS = {
     17: ("Btn A", "next"),
     22: ("Btn B", "prev"),
     23: ("Btn C", "vol_up"),
+    24: ("Btn reset", "reset"),
     27: ("Btn D", "vol_down"),
 
     # Optional: Reset auf eigenem Pin (Beispiel-Pin anpassen)
@@ -42,7 +42,6 @@ BUTTONS = {
     19: ("Unused", None),
     20: ("Unused", None),
     21: ("Unused", None),
-    24: ("Unused", None),
     25: ("Unused", None),
     26: ("Unused", None),
 }
