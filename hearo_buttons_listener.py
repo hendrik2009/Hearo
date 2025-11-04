@@ -1,10 +1,11 @@
-# Hearo Button Listener supports the hardware buttons via gpio
+#!/usr/bin/env python3
+# buttons_4_daemon_spec.py — libgpiod 1.x, Prints-Flag + Daemon-Events nach Hearo-Spec
 import gpiod, time, socket, json, os
 
 CHIP = "gpiochip0"
 POLL_SLEEP = 0.01   # 10 ms Polling
 DEBOUNCE_MS = 30
-PRINTS_ON = False
+PRINTS_ON = True
 SOCKET_PATH = "/tmp/hearo_buttons.sock"   # {{SOCKET_PATH}}
 
 # Times per spec
@@ -20,30 +21,30 @@ SEEK_STEP_SEC = 15           # Sekunden pro Schritt
 # Actions: "next", "prev", "vol_up", "vol_down", "reset", or None (ignorieren)
 BUTTONS = {
     # Aktiv genutzte Buttons
-    17: ("BTN_NEXT", "next"),
-    22: ("BTN_PREV", "prev"),
-    23: ("BTN_VOL_UP", "vol_up"),
-    24: ("BTN_RESET", "reset"),
-    27: ("BTN_VOL_DOWN", "vol_down"),
+    17: ("Btn A", "next"),
+    22: ("Btn B", "prev"),
+    23: ("Btn C", "vol_up"),
+    24: ("reset", "reset"),
+    27: ("Btn D", "vol_down"),
 
     # Optional: Reset auf eigenem Pin (Beispiel-Pin anpassen)
     # {{reset_pin}}: ("Reset", "reset"),
 
     # Weitere gängige BCM-Pins vorbereitet (standard: ignorieren)
-    """2:  ("Unused", None),
-    3:  ("Unused", None),
-    4:  ("Unused", None),
-    5:  ("Unused", None),
-    6:  ("Unused", None),
-    12: ("Unused", None),
-    13: ("Unused", None),
-    16: ("Unused", None),
-    18: ("Unused", None),
-    19: ("Unused", None),
-    20: ("Unused", None),
-    21: ("Unused", None),
-    25: ("Unused", None),
-    26: ("Unused", None),"""
+    #2:  ("Unused", None),
+    #3:  ("Unused", None),
+    #4:  ("Unused", None),
+    #5:  ("Unused", None),
+    #6:  ("Unused", None),
+    #12: ("Unused", None),
+    #13: ("Unused", None),
+    #16: ("Unused", None),
+    #18: ("Unused", None),
+    #19: ("Unused", None),
+    #20: ("Unused", None),
+    #21: ("Unused", None),
+    #25: ("Unused", None),
+    #26: ("Unused", None),
 }
 
 def log(msg): 

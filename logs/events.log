@@ -1,143 +1,39 @@
-2025-11-03 20:13:07,742 INFO Daemon started, socket ready
-2025-11-03 20:13:11,044 INFO RX {'type': 'player.next', 'ts': 1762197191.042839}
-2025-11-03 20:13:11,926 INFO RX {'type': 'player.next', 'ts': 1762197191.925726}
-2025-11-03 20:13:12,601 INFO RX {'type': 'player.next', 'ts': 1762197192.5990083}
-2025-11-03 20:13:13,314 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762197193.3131442}
-2025-11-03 20:13:13,814 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197193.8137336}
-2025-11-03 20:13:14,315 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197194.3141992}
-2025-11-03 20:13:14,818 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197194.816657}
-2025-11-03 20:13:15,323 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197195.3216262}
-2025-11-03 20:13:15,828 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197195.8266575}
-2025-11-03 20:13:16,331 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197196.3305745}
-2025-11-03 20:13:16,364 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762197196.3633752}
-2025-11-03 20:13:28,076 INFO Daemon stopped
-2025-11-03 20:20:56,480 INFO Daemon started, socket ready
-2025-11-03 20:21:00,509 INFO RX {'type': 'player.next', 'ts': 1762197660.507638}
-2025-11-03 20:21:01,973 INFO RX {'type': 'player.next', 'ts': 1762197661.9728284}
-2025-11-03 20:21:02,931 INFO RX {'type': 'player.next', 'ts': 1762197662.930699}
-2025-11-03 20:21:03,473 INFO RX {'type': 'player.next', 'ts': 1762197663.4724348}
-2025-11-03 20:21:04,084 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762197664.0834832}
-2025-11-03 20:21:04,594 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197664.5931258}
-2025-11-03 20:21:04,830 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762197664.829116}
-2025-11-03 20:21:08,874 INFO RX {'type': 'player.next', 'ts': 1762197668.8734388}
-2025-11-03 20:21:09,926 INFO RX {'type': 'player.next', 'ts': 1762197669.9251254}
-2025-11-03 20:21:10,883 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762197670.8820076}
-2025-11-03 20:21:11,389 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197671.3878922}
-2025-11-03 20:21:11,894 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197671.8935885}
-2025-11-03 20:21:12,403 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762197672.401829}
-2025-11-03 20:21:12,641 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762197672.6398275}
-2025-11-03 21:50:52,776 INFO Daemon started, socket ready
-2025-11-03 21:52:16,582 INFO RX {'type': 'player.prev', 'ts': 1762203136.5733197}
-2025-11-03 21:52:19,432 INFO RX {'type': 'player.next', 'ts': 1762203139.4315522}
-2025-11-03 21:52:31,335 INFO RX {'type': 'button.pressed_start', 'button': 'Btn reset', 'ts': 1762203151.3341184}
-2025-11-03 21:52:34,898 INFO RX {'type': 'button.pressed_end', 'button': 'Btn reset', 'ts': 1762203154.897158}
-2025-11-03 21:52:39,663 INFO RX {'type': 'button.pressed_start', 'button': 'Btn reset', 'ts': 1762203159.6622145}
-2025-11-03 21:52:46,062 INFO RX {'type': 'system.reset', 'ts': 1762203166.0616121}
-2025-11-03 21:52:53,511 INFO RX {'type': 'player.next', 'ts': 1762203173.5096712}
-2025-11-03 21:52:56,964 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762203176.963091}
-2025-11-03 21:52:57,471 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203177.4698071}
-2025-11-03 21:52:57,978 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203177.9768338}
-2025-11-03 21:52:58,486 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203178.485229}
-2025-11-03 21:52:58,995 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203178.9938102}
-2025-11-03 21:52:59,503 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203179.502335}
-2025-11-03 21:53:00,010 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203180.0088286}
-2025-11-03 21:53:00,190 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762203180.1895297}
-2025-11-03 21:53:01,723 INFO RX {'type': 'button.pressed_start', 'button': 'Btn B', 'ts': 1762203181.722235}
-2025-11-03 21:53:02,224 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203182.2233171}
-2025-11-03 21:53:02,725 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203182.7243257}
-2025-11-03 21:53:03,226 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203183.225409}
-2025-11-03 21:53:03,730 INFO RX {'type': 'button.pressed_end', 'button': 'Btn B', 'ts': 1762203183.7291965}
-2025-11-03 21:53:06,092 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203186.090834}
-2025-11-03 21:53:08,164 INFO RX {'type': 'button.pressed_start', 'button': 'Btn D', 'ts': 1762203188.163815}
-2025-11-03 21:53:08,166 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203188.1652822}
-2025-11-03 21:53:08,473 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203188.4725368}
-2025-11-03 21:53:08,782 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203188.7815335}
-2025-11-03 21:53:09,083 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.0826273}
-2025-11-03 21:53:09,384 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.382796}
-2025-11-03 21:53:09,695 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.6942294}
-2025-11-03 21:53:09,996 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203189.9951298}
-2025-11-03 21:53:10,019 INFO RX {'type': 'button.pressed_end', 'button': 'Btn D', 'ts': 1762203190.017822}
-2025-11-03 21:53:10,966 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203190.9648397}
-2025-11-03 21:53:14,153 INFO RX {'type': 'button.pressed_start', 'button': 'Btn C', 'ts': 1762203194.1524785}
-2025-11-03 21:53:14,155 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203194.154221}
-2025-11-03 21:53:14,455 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203194.4544792}
-2025-11-03 21:53:14,756 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203194.755007}
-2025-11-03 21:53:15,066 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.0652025}
-2025-11-03 21:53:15,366 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.3656807}
-2025-11-03 21:53:15,677 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.675849}
-2025-11-03 21:53:15,977 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203195.9761484}
-2025-11-03 21:53:16,040 INFO RX {'type': 'button.pressed_end', 'button': 'Btn C', 'ts': 1762203196.0393152}
-2025-11-03 22:04:31,173 INFO RX {'type': 'player.prev', 'ts': 1762203871.1312358}
-2025-11-03 22:04:31,735 INFO RX {'type': 'player.next', 'ts': 1762203871.7340572}
-2025-11-03 22:04:40,053 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203880.0502708}
-2025-11-03 22:04:41,556 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203881.5556195}
-2025-11-03 22:04:44,241 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203884.2404785}
-2025-11-03 22:04:46,870 INFO RX {'type': 'button.pressed_start', 'button': 'Btn C', 'ts': 1762203886.869841}
-2025-11-03 22:04:46,871 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203886.8703375}
-2025-11-03 22:04:47,178 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203887.1780362}
-2025-11-03 22:04:47,486 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203887.485322}
-2025-11-03 22:04:47,793 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203887.7924924}
-2025-11-03 22:04:48,101 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203888.1002061}
-2025-11-03 22:04:48,142 INFO RX {'type': 'button.pressed_end', 'button': 'Btn C', 'ts': 1762203888.1414914}
-2025-11-03 22:04:50,665 INFO RX {'type': 'button.pressed_start', 'button': 'Btn D', 'ts': 1762203890.6647177}
-2025-11-03 22:04:50,667 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203890.6653705}
-2025-11-03 22:04:50,975 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203890.974589}
-2025-11-03 22:04:51,276 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203891.2749581}
-2025-11-03 22:04:51,585 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203891.5845394}
-2025-11-03 22:04:51,886 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203891.8855414}
-2025-11-03 22:04:51,999 INFO RX {'type': 'button.pressed_end', 'button': 'Btn D', 'ts': 1762203891.9981527}
-2025-11-03 22:04:52,849 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203892.848526}
-2025-11-03 22:04:56,639 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762203896.6384175}
-2025-11-03 22:04:56,795 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762203896.7943487}
-2025-11-03 22:04:59,709 INFO RX {'type': 'button.pressed_start', 'button': 'Btn reset', 'ts': 1762203899.7085466}
-2025-11-03 22:05:05,226 INFO RX {'type': 'system.reset', 'ts': 1762203905.225454}
-2025-11-03 22:05:07,375 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762203907.3739474}
-2025-11-03 22:05:07,876 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762203907.8755329}
-2025-11-03 22:05:08,032 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762203908.031249}
-2025-11-03 22:05:09,327 INFO RX {'type': 'player.next', 'ts': 1762203909.326102}
-2025-11-03 22:05:15,243 INFO RX {'type': 'player.next', 'ts': 1762203915.2426174}
-2025-11-03 22:05:16,239 INFO RX {'type': 'player.prev', 'ts': 1762203916.2383418}
-2025-11-03 22:05:17,348 INFO RX {'type': 'player.prev', 'ts': 1762203917.3476908}
-2025-11-03 22:05:18,468 INFO RX {'type': 'button.pressed_start', 'button': 'Btn B', 'ts': 1762203918.4678807}
-2025-11-03 22:05:18,969 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203918.9688647}
-2025-11-03 22:05:19,470 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203919.4697692}
-2025-11-03 22:05:19,974 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203919.9731789}
-2025-11-03 22:05:20,481 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203920.480454}
-2025-11-03 22:05:20,986 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203920.9850907}
-2025-11-03 22:05:21,491 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762203921.4906816}
-2025-11-03 22:05:21,595 INFO RX {'type': 'button.pressed_end', 'button': 'Btn B', 'ts': 1762203921.5939925}
-2025-11-03 22:13:57,669 INFO Daemon started, socket ready
-2025-11-03 22:15:53,011 INFO Daemon started, socket ready
-2025-11-03 22:22:39,146 INFO RX {'type': 'player.prev', 'ts': 1762204959.127885}
-2025-11-03 22:22:39,863 INFO RX {'type': 'player.next', 'ts': 1762204959.8624403}
-2025-11-03 22:22:40,133 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762204960.1321082}
-2025-11-03 22:22:44,024 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762204964.0231667}
-2025-11-03 22:22:44,426 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762204964.4247363}
-2025-11-03 22:22:45,342 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762204965.3406928}
-2025-11-03 22:22:47,383 INFO RX {'type': 'player.prev', 'ts': 1762204967.3826778}
-2025-11-03 22:22:48,168 INFO RX {'type': 'player.prev', 'ts': 1762204968.1674192}
-2025-11-03 22:22:49,010 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762204969.0090191}
-2025-11-03 22:22:49,515 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762204969.5143104}
-2025-11-03 22:22:50,022 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762204970.0211475}
-2025-11-03 22:22:50,485 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762204970.484505}
-2025-11-03 22:22:51,668 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762204971.6669037}
-2025-11-03 22:22:52,275 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762204972.2749083}
-2025-11-03 22:22:52,685 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762204972.684101}
-2025-11-03 22:22:53,633 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762204973.6330807}
-2025-11-03 22:33:29,187 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762205609.161987}
-2025-11-03 22:33:30,556 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762205610.5549507}
-2025-11-03 22:33:32,186 INFO RX {'type': 'player.next', 'ts': 1762205612.1857927}
-2025-11-03 22:33:35,375 INFO RX {'type': 'button.pressed_start', 'button': 'Btn reset', 'ts': 1762205615.374416}
-2025-11-03 22:33:40,841 INFO RX {'type': 'system.reset', 'ts': 1762205620.8395991}
-2025-11-03 22:33:42,462 INFO RX {'type': 'player.next', 'ts': 1762205622.4614239}
-2025-11-03 22:33:43,097 INFO RX {'type': 'player.prev', 'ts': 1762205623.0962832}
-2025-11-03 22:33:44,135 INFO RX {'type': 'button.pressed_start', 'button': 'Btn B', 'ts': 1762205624.1338592}
-2025-11-03 22:33:44,640 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762205624.6395195}
-2025-11-03 22:33:45,146 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762205625.1452203}
-2025-11-03 22:33:45,652 INFO RX {'type': 'player.seek', 'delta_sec': -15, 'ts': 1762205625.6510792}
-2025-11-03 22:33:45,921 INFO RX {'type': 'button.pressed_end', 'button': 'Btn B', 'ts': 1762205625.9206226}
-2025-11-03 22:33:46,649 INFO RX {'type': 'button.pressed_start', 'button': 'Btn A', 'ts': 1762205626.6481688}
-2025-11-03 22:33:47,159 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762205627.1584904}
-2025-11-03 22:33:47,669 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762205627.668641}
-2025-11-03 22:33:48,173 INFO RX {'type': 'player.seek', 'delta_sec': 15, 'ts': 1762205628.1724968}
-2025-11-03 22:33:48,443 INFO RX {'type': 'button.pressed_end', 'button': 'Btn A', 'ts': 1762205628.4418612}
+2025-11-04 08:23:27,303 INFO Daemon started, socket ready
+2025-11-04 08:23:33,328 INFO RX {'type': 'player.prev', 'ts': 1762241013.1412272}
+2025-11-04 08:23:34,385 INFO RX {'type': 'player.next', 'ts': 1762241014.3786805}
+2025-11-04 08:23:37,177 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762241017.173702}
+2025-11-04 08:23:38,272 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762241018.2693994}
+2025-11-04 08:23:39,290 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241019.2878988}
+2025-11-04 08:23:39,478 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241019.476843}
+2025-11-04 08:23:41,036 INFO RX {'type': 'button.pressed_start', 'button': 'Btn D', 'ts': 1762241021.034156}
+2025-11-04 08:23:41,047 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241021.0357828}
+2025-11-04 08:23:41,341 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241021.3385088}
+2025-11-04 08:23:41,649 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241021.6485848}
+2025-11-04 08:23:41,952 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241021.9498448}
+2025-11-04 08:23:42,255 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241022.2527099}
+2025-11-04 08:23:42,638 INFO RX {'type': 'button.pressed_end', 'button': 'Btn D', 'ts': 1762241022.4893098}
+2025-11-04 08:23:50,253 INFO RX {'type': 'player.next', 'ts': 1762241030.1425083}
+2025-11-04 08:23:51,299 INFO RX {'type': 'player.prev', 'ts': 1762241031.297992}
+2025-11-04 08:25:46,835 INFO Daemon started, socket ready
+2025-11-04 08:37:35,114 INFO Daemon started, socket ready
+2025-11-04 08:38:19,553 INFO RX {'type': 'player.prev', 'ts': 1762241899.543828}
+2025-11-04 08:38:20,493 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762241900.4925368}
+2025-11-04 08:38:21,242 INFO RX {'type': 'player.next', 'ts': 1762241901.2410173}
+2025-11-04 08:38:21,868 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762241901.8676434}
+2025-11-04 08:38:22,687 INFO RX {'type': 'button.pressed_start', 'button': 'reset', 'ts': 1762241902.685983}
+2025-11-04 08:38:27,817 INFO RX {'type': 'system.reset', 'ts': 1762241907.8132083}
+2025-11-04 08:41:09,946 INFO RX {'type': 'player.prev', 'ts': 1762242066.3553817}
+2025-11-04 08:41:12,200 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762242071.1347642}
+2025-11-04 08:41:13,883 INFO RX {'type': 'player.prev', 'ts': 1762242073.5918813}
+2025-11-04 08:41:14,565 INFO RX {'type': 'player.next', 'ts': 1762242074.5645008}
+2025-11-04 08:41:18,376 INFO RX {'type': 'button.pressed_start', 'button': 'Btn C', 'ts': 1762242078.3756583}
+2025-11-04 08:41:18,378 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762242078.3762639}
+2025-11-04 08:41:18,680 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762242078.679145}
+2025-11-04 08:41:18,983 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762242078.9822404}
+2025-11-04 08:41:19,131 INFO RX {'type': 'button.pressed_end', 'button': 'Btn C', 'ts': 1762242079.1300247}
+2025-11-04 08:41:20,605 INFO RX {'type': 'player.volume.step', 'delta': 5, 'ts': 1762242080.6035502}
+2025-11-04 08:41:22,935 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762242082.9125934}
+2025-11-04 08:41:24,189 INFO RX {'type': 'button.pressed_start', 'button': 'Btn D', 'ts': 1762242084.186152}
+2025-11-04 08:41:24,197 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762242084.1874352}
+2025-11-04 08:41:24,495 INFO RX {'type': 'player.volume.step', 'delta': -5, 'ts': 1762242084.4948168}
+2025-11-04 08:41:24,703 INFO RX {'type': 'button.pressed_end', 'button': 'Btn D', 'ts': 1762242084.7028015}
