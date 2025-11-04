@@ -8,7 +8,24 @@ sudo nano /etc/systemd/system/hearo-event-daemon.service
 Start Daemons:
 sudo systemctl start hearo-event-daemon
 sudo systemctl start hearo-buttons-listener.service
+sudo systemctl start hearo-led-daemon.service
 
 Stop Daemons:
 sudo systemctl stop hearo-event-daemon
 sudo systemctl stop hearo-buttons-listener.service
+sudo systemctl stop hearo-led-daemon.service
+
+
+
+GPIO
+    Buttons:
+        17: ("Btn A", "next")
+        22: ("Btn B", "prev")
+        23: ("Btn C", "vol_up")
+        24: ("reset", "reset")
+        27: ("Btn D", "vol_down")
+
+    LED:
+        PIN_RED: 12
+        PIN_GREEN:13
+        PIN_BLUE:18
