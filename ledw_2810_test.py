@@ -2,10 +2,10 @@ from rpi_ws281x import PixelStrip, Color
 import time
 
 LED_COUNT = 1        # Number of LEDs in your test setup
-LED_PIN = 10         # GPIO10 (SPI0 MOSI)
+LED_PIN = 18         # GPIO10 (SPI0 MOSI)
 LED_FREQ_HZ = 800000
 LED_DMA = 10
-LED_BRIGHTNESS = 64  # 0–255
+LED_BRIGHTNESS = 255  # 0–255
 LED_CHANNEL = 0
 LED_INVERT = False
 
