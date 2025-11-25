@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Hearo LED Daemon – GPIO18, 1 LED, debug IPC
+Hearo LED Daemon – GPIO12, PWM1, smooth WS2811
 
-- Drives WS281x strip on GPIO18 using rpi_ws281x
-- Listens on /tmp/hearo/ledd.sock
+- 1+ WS281x LEDs on GPIO12 (PWM1 CH0)
+- IPC on /tmp/hearo/ledd.sock
 - Background, feedback, error layers
 """
 
@@ -30,8 +30,8 @@ CMD_SOCKET_PATH = "/tmp/hearo/ledd.sock"
 TICK_HZ = 30.0
 TICK_INTERVAL = 1.0 / TICK_HZ
 
-LED_COUNT = 1          # your current hardware
-LED_PIN = 18           # GPIO18 (PWM)
+LED_COUNT = 1          # set to actual number later
+LED_PIN = 12           # GPIO12 (PWM1 CH0)
 LED_FREQ_HZ = 800000
 LED_DMA = 10
 LED_INVERT = False
@@ -88,7 +88,6 @@ class LedDriver:
     def __init__(self, led_count: int):
         self.led_count = led_count
 
-        # Constructor compatible with typical rpi_ws281x usage
         self.strip = PixelStrip(
             LED_COUNT,
             LED_PIN,
@@ -188,11 +187,9 @@ def expire_feedback(state: DaemonState, t_ms: int):
     if not fb:
         return
     if fb.duration_ms is not None and t_ms - fb.start_ms >= fb.duration_ms:
-        logging.debug("feedback expired (duration)")
         state.feedback = None
         return
     if fb.cycles is not None and fb.cycles_done >= fb.cycles:
-        logging.debug("feedback expired (cycles)")
         state.feedback = None
 
 
@@ -290,7 +287,7 @@ class IpcServer:
             os.unlink(self.path)
 
 
-IPC_MESSAGE_QUEUE = []
+IPC_MESSAGE_QUEUE: list[Dict[str, Any]] = []
 
 
 # ---------------------------------------------------------------------------
@@ -352,7 +349,6 @@ def parse_rgb(d) -> Optional[RGB]:
 def handle_cmd(msg: Dict[str, Any], state: DaemonState):
     logging.info("CMD: %s", msg.get("cmd"))
     if msg.get("schema") != "hearo.ipc/cmd":
-        logging.warning("CMD: wrong schema %r", msg.get("schema"))
         send_ack(msg, False)
         return
 
@@ -420,7 +416,6 @@ def handle_cmd(msg: Dict[str, Any], state: DaemonState):
         })
 
     else:
-        logging.warning("CMD: unknown %r", cmd)
         send_ack(msg, False)
 
 
@@ -438,7 +433,7 @@ def _stop(signum, frame):
 
 def main():
     logging.basicConfig(
-        level=logging.DEBUG,
+        level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s"
     )
 
@@ -464,7 +459,6 @@ def main():
 
             while IPC_MESSAGE_QUEUE:
                 msg = IPC_MESSAGE_QUEUE.pop(0)
-                logging.debug("CMD: received %s", msg)
                 handle_cmd(msg, state)
 
             now = time.monotonic()
@@ -479,7 +473,6 @@ def main():
     finally:
         driver.off()
         ipc.close()
-        logging.info("Daemon shutdown")
 
     return 0
 
