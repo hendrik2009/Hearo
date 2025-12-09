@@ -100,10 +100,12 @@ class CommandClient:
         self.path = path
         self.origin = origin
 
-    def send_cmd(self,
-                 cmd_name: str,
-                 payload: Optional[Dict[str, Any]] = None,
-                 timeout_ms: int = 1000) -> None:
+    def send_cmd(
+        self,
+        cmd_name: str,
+        payload: Optional[Dict[str, Any]] = None,
+        timeout_ms: int = 1000,
+    ) -> None:
         cmd_id = f"cmd-hcsm-{epoch_ms()}"
         env = {
             "schema": IPC_SCHEMA_CMD,
@@ -122,16 +124,20 @@ class CommandClient:
                 s.connect(self.path)
                 s.send(data)
         except OSError as e:
-            logging.error("HCSM: failed to send cmd %s to %s: %s",
-                          cmd_name, self.path, e)
+            logging.error(
+                "HCSM: failed to send cmd %s to %s: %s",
+                cmd_name,
+                self.path,
+                e,
+            )
 
 
 class EventServer:
     """
     Datagram event server.
 
-    If started via systemd socket activation (hearo-events.socket),
-    reuse inherited fd=3. Otherwise bind to EVENT_SOCKET_PATH.
+    This version assumes systemd socket activation (hearo-events.socket)
+    and will ONLY use the inherited fd. If no fd is provided, it exits.
     """
 
     def __init__(self, path: str) -> None:
@@ -143,6 +149,7 @@ class EventServer:
         listen_pid = os.getenv("LISTEN_PID")
 
         if listen_fds > 0 and listen_pid and int(listen_pid) == os.getpid():
+            # systemd passes the first socket on fd 3
             fd = 3
             s = socket.socket(fileno=fd)
             s.setblocking(False)
@@ -150,19 +157,14 @@ class EventServer:
             logging.info("HCSM: using systemd-activated event socket (fd=%d)", fd)
             return
 
-        # Fallback: own socket
-        os.makedirs(os.path.dirname(self.path), exist_ok=True)
-        if os.path.exists(self.path):
-            try:
-                os.unlink(self.path)
-            except OSError:
-                logging.warning("HCSM: could not unlink existing %s", self.path)
-
-        s = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        s.bind(self.path)
-        s.setblocking(False)
-        self.sock = s
-        logging.info("HCSM: listening on %s (self-owned)", self.path)
+        # No systemd socket → configuration error
+        logging.error(
+            "HCSM: no systemd-activated event socket found "
+            "(LISTEN_FDS=%s, LISTEN_PID=%s). Exiting.",
+            listen_fds,
+            listen_pid,
+        )
+        sys.exit(1)
 
     def recv(self) -> Optional[bytes]:
         if not self.sock:
@@ -210,7 +212,10 @@ class HcsmDaemon:
         self.running: bool = True
 
         self.daemons_started: Set[str] = set()
-        self.wifi_status_seen: bool = False
+
+        # Latched input dimensions (memory of latest states)
+        self.wifi_connected: bool = False
+        self.auth_ok: bool = False
 
         self.initiated_emitted: bool = False
         self.current_tag_uid: Optional[str] = None
@@ -218,8 +223,7 @@ class HcsmDaemon:
     # ----------------- state + events -----------------
 
     def _emit_state_changed(self) -> None:
-        self.sender.send_event("HCSM_EVENT_STATE_CHANGED",
-                               {"state": self.state})
+        self.sender.send_event("HCSM_EVENT_STATE_CHANGED", {"state": self.state})
 
     def _transition(self, new_state: str) -> None:
         if new_state == self.state:
@@ -241,6 +245,25 @@ class HcsmDaemon:
     def _all_daemons_started(self) -> bool:
         return set(REQUIRED_DAEMON_EVENTS.values()).issubset(self.daemons_started)
 
+    # ----------------- input latching -----------------
+
+    def _update_input_dimensions(self, event: str) -> None:
+        # Wi-Fi dimension
+        if event == "WSM_EVENT_WIFI_CONNECTED":
+            self.wifi_connected = True
+        elif event == "WSM_EVENT_WIFI_LOST":
+            self.wifi_connected = False
+
+        # Auth dimension
+        if event == "PLSM_EVENT_AUTHENTICATED":
+            self.auth_ok = True
+        elif event in (
+            "PLSM_EVENT_AUTH_FAILED",
+            "PLSM_EVENT_AUTH_LOST",
+            "PLSM_EVENT_DISCONNECTED",
+        ):
+            self.auth_ok = False
+
     # ----------------- main event entry -----------------
 
     def handle_raw_event(self, raw: bytes) -> None:
@@ -258,11 +281,13 @@ class HcsmDaemon:
         if not isinstance(event, str):
             return
 
+        # 1) Track daemons
         self._handle_daemon_started(event)
 
-        if event in ("WSM_EVENT_WIFI_CONNECTED", "WSM_EVENT_WIFI_LOST"):
-            self.wifi_status_seen = True
+        # 2) Latch input dimensions (Wi-Fi, auth) independent of state
+        self._update_input_dimensions(event)
 
+        # 3) State-specific handling
         if self.state == HcsmState.SYS_INIT:
             self._handle_init_event(event, payload)
         elif self.state == HcsmState.SYS_NO_WIFI:
@@ -274,7 +299,6 @@ class HcsmDaemon:
         elif self.state == HcsmState.SYS_PLAYING:
             self._handle_playing_event(event, payload)
         elif self.state == HcsmState.SYS_SHUTDOWN:
-            # ignore everything
             return
         elif self.state == HcsmState.SYS_ERROR:
             self._handle_error_event(event, payload)
@@ -286,15 +310,30 @@ class HcsmDaemon:
         if event in ("NFC_EVENT_TAG_ADDED", "NFC_EVENT_TAG_REMOVED", "BD_EVENT_BUTTON"):
             return
 
-        if self._all_daemons_started() and self.wifi_status_seen:
-            self._transition(HcsmState.SYS_NO_WIFI)
+        # Once all daemons are up, choose initial system state
+        if self._all_daemons_started():
+            if self.wifi_connected:
+                if self.auth_ok:
+                    # Wi-Fi + Spotify auth already up -> ready to play
+                    self._transition(HcsmState.SYS_READY_PAUSED)
+                else:
+                    # Wi-Fi but not authenticated -> offline
+                    self._transition(HcsmState.SYS_OFFLINE)
+            else:
+                # No Wi-Fi yet
+                self._transition(HcsmState.SYS_NO_WIFI)
+
             if not self.initiated_emitted:
                 self.sender.send_event("HCSM_EVENT_INITIATED", {})
                 self.initiated_emitted = True
 
     def _handle_no_wifi_event(self, event: str, payload: Dict[str, Any]) -> None:
         if event == "WSM_EVENT_WIFI_CONNECTED":
-            self._transition(HcsmState.SYS_OFFLINE)
+            # Auth may already be OK by the time Wi-Fi comes up
+            if self.auth_ok:
+                self._transition(HcsmState.SYS_READY_PAUSED)
+            else:
+                self._transition(HcsmState.SYS_OFFLINE)
             return
 
         if event == "POWD_EVENT_BATTERY_CRITICAL":
@@ -302,15 +341,13 @@ class HcsmDaemon:
             self._transition(HcsmState.SYS_SHUTDOWN)
             return
 
-        # ignore NFC tag attempts; optional feedback handled by LED daemon
-
     def _handle_offline_event(self, event: str, payload: Dict[str, Any]) -> None:
         if event == "PLSM_EVENT_AUTHENTICATED":
             self._transition(HcsmState.SYS_READY_PAUSED)
             return
 
         if event in ("PLSM_EVENT_AUTH_FAILED", "PLSM_EVENT_AUTH_LOST"):
-            return  # stay OFFLINE
+            return
 
         if event == "WSM_EVENT_WIFI_LOST":
             self._transition(HcsmState.SYS_NO_WIFI)
@@ -320,8 +357,6 @@ class HcsmDaemon:
             self._cmd_stop_playback()
             self._transition(HcsmState.SYS_SHUTDOWN)
             return
-
-        # ignore NFC tag attempts; optional feedback by LED daemon
 
     def _handle_ready_paused_event(self, event: str, payload: Dict[str, Any]) -> None:
         if event == "NFC_EVENT_TAG_ADDED":
@@ -336,16 +371,17 @@ class HcsmDaemon:
             return
 
         if event == "PLSM_EVENT_TAG_UNKNOWN":
-            # HCSM does not send LED commands; LEDD can react to this event itself if needed
             return
 
         if event == "WSM_EVENT_WIFI_LOST":
             self._transition(HcsmState.SYS_NO_WIFI)
             return
 
-        if event in ("PLSM_EVENT_DISCONNECTED",
-                     "PLSM_EVENT_AUTH_LOST",
-                     "PLSM_EVENT_AUTH_FAILED"):
+        if event in (
+            "PLSM_EVENT_DISCONNECTED",
+            "PLSM_EVENT_AUTH_LOST",
+            "PLSM_EVENT_AUTH_FAILED",
+        ):
             self._transition(HcsmState.SYS_OFFLINE)
             return
 
@@ -363,7 +399,6 @@ class HcsmDaemon:
             return
 
         if event == "PLSM_EVENT_TAG_UNKNOWN":
-            # LEDD can map this to feedback if desired
             return
 
         if event == "PLSM_EVENT_PLAY_STOPPED":
@@ -398,7 +433,6 @@ class HcsmDaemon:
             return
 
     def _handle_error_event(self, event: str, payload: Dict[str, Any]) -> None:
-        # Minimal: wait until all daemons are up again, then go back to INIT
         if self._all_daemons_started():
             self._transition(HcsmState.SYS_INIT)
 
@@ -426,7 +460,7 @@ class HcsmDaemon:
     def setup(self) -> None:
         self.event_server.start()
         logging.info("HCSM: start in SYS_INIT")
-        # Ask WSM for status; response will arrive as events
+        # Initial request; if it fails, we just rely on events later.
         self.wsm.send_cmd("WSM_COMMAND_STATUS", {})
         self._emit_state_changed()
 
@@ -463,9 +497,7 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="HEARO Central State Machine (HCSM)")
-    parser.add_argument(
-        "--verbose", action="store_true", help="enable debug logging"
-    )
+    parser.add_argument("--verbose", action="store_true", help="enable debug logging")
     args = parser.parse_args()
 
     setup_logging(args.verbose)

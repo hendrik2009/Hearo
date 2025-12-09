@@ -26,6 +26,7 @@ Events:
     * PLSM_EVENT_PLAY_STOPPED {}
     * PLSM_EVENT_STATE_CHANGED {old, new}
     * PLSM_EVENT_PLAYBACK_ERROR {code, message}   (optional)
+    * PLSM_EVENT_DAEMON_STARTED {}                (daemon ready for commands)
 
 DB (minimal tag mapping schema):
     /var/lib/hearo/hearo.db
@@ -298,51 +299,66 @@ class WebAPIBackend:
         self.save_access_token()
         logging.info("PLSM backend: access_token refreshed")
 
-    def discover_device(self) -> None:
+    def discover_device(self,
+                        retry: bool = False,
+                        retry_delay_sec: int = 5) -> None:
         """
         Discover the librespot device_id via /me/player/devices.
         Only devices whose name contains device_name_substr are accepted.
+
+        If retry=True, keep polling until a matching device appears.
         """
-        status, resp_body = self._api_request("GET", "/me/player/devices")
-        if status != 200:
-            raise BackendError(
-                f"/me/player/devices failed ({status}): {resp_body}",
-                code="BACKEND_ERROR",
-            )
-
-        try:
-            j = json.loads(resp_body)
-        except Exception as e:
-            raise BackendError(f"invalid devices JSON: {e}", code="BACKEND_ERROR")
-
-        devices = j.get("devices") or []
         name_sub = self.device_name_substr
-        found_id: Optional[str] = None
-        for d in devices:
-            name = (d.get("name") or "").lower()
-            if not name:
-                continue
-            if name_sub and name_sub in name:
-                found_id = d.get("id")
-                break
 
-        if not found_id:
-            raise BackendError(
-                f"no device matching name substring '{name_sub}'",
-                code="DEVICE_UNAVAILABLE",
-                device_issue=True,
+        while True:
+            status, resp_body = self._api_request("GET", "/me/player/devices")
+            if status != 200:
+                raise BackendError(
+                    f"/me/player/devices failed ({status}): {resp_body}",
+                    code="BACKEND_ERROR",
+                )
+
+            try:
+                j = json.loads(resp_body)
+            except Exception as e:
+                raise BackendError(f"invalid devices JSON: {e}", code="BACKEND_ERROR")
+
+            devices = j.get("devices") or []
+            found_id: Optional[str] = None
+            for d in devices:
+                name = (d.get("name") or "").lower()
+                if not name:
+                    continue
+                if name_sub and name_sub in name:
+                    found_id = d.get("id")
+                    break
+
+            if found_id:
+                self.device_id = found_id
+                logging.info("PLSM backend: using device_id %s", self.device_id)
+                return
+
+            if not retry:
+                raise BackendError(
+                    f"no device matching name substring '{name_sub}'",
+                    code="DEVICE_UNAVAILABLE",
+                    device_issue=True,
+                )
+
+            logging.warning(
+                "PLSM backend: no device matching '%s', retrying in %ss",
+                name_sub,
+                retry_delay_sec,
             )
-
-        self.device_id = found_id
-        logging.info("PLSM backend: using device_id %s", self.device_id)
+            time.sleep(retry_delay_sec)
 
     def ensure_ready(self) -> None:
         """
         Ensure we have token + device_id and can talk to backend.
         """
         self.load_token_file()
-        # Try a lightweight device discovery; this will refresh token if needed
-        self.discover_device()
+        # Will keep retrying device discovery every few seconds until device is visible
+        self.discover_device(retry=True)
 
     # -------- public playback API --------
 
@@ -410,7 +426,7 @@ class WebAPIBackend:
         if not self.device_id:
             self.ensure_ready()
         params = {"device_id": self.device_id}
-        status, resp_body = self._api_request("POST", "/me/player/next", params=params, body=None)
+        status, resp_body = self._api_request("POST", "/v1/me/player/next", params=params, body=None)
         if status not in (200, 202, 204):
             raise BackendError(
                 f"/me/player/next failed ({status}): {resp_body}",
@@ -421,7 +437,7 @@ class WebAPIBackend:
         if not self.device_id:
             self.ensure_ready()
         params = {"device_id": self.device_id}
-        status, resp_body = self._api_request("POST", "/me/player/previous", params=params, body=None)
+        status, resp_body = self._api_request("POST", "/v1/me/player/previous", params=params, body=None)
         if status not in (200, 202, 204):
             raise BackendError(
                 f"/me/player/previous failed ({status}): {resp_body}",
@@ -591,6 +607,7 @@ class PLSMDaemon:
         self.last_progress_save_ms: int = epoch_ms()
 
         self._setup_complete = False
+        self._daemon_started_sent = False
 
     # --------------- lifecycle -------------------
 
@@ -614,6 +631,8 @@ class PLSMDaemon:
                 self._emit_auth_failed(f"startup_auth_failed:{e.code}")
                 self._transition_state(PL_STATE_ERROR)
             elif e.device_issue:
+                # With retrying discover_device this should not happen anymore,
+                # but keep behaviour for safety.
                 self.sender.send_event("PLSM_EVENT_DISCONNECTED", {})
                 self._emit_auth_lost(f"device_unavailable:{e.code}")
                 self._transition_state(PL_STATE_ERROR)
@@ -642,6 +661,13 @@ class PLSMDaemon:
             {"old": old, "new": new_state}
         )
         logging.info("PLSM: state %s -> %s", old, new_state)
+
+    def _emit_daemon_started(self) -> None:
+        if self._daemon_started_sent:
+            return
+        self.sender.send_event("PLSM_EVENT_DAEMON_STARTED", {})
+        self._daemon_started_sent = True
+        logging.info("PLSM: emitted PLSM_EVENT_DAEMON_STARTED")
 
     # --------------- event helpers ----------------
 
@@ -964,6 +990,7 @@ class PLSMDaemon:
         # Setup
         self.setup()
         if not self._setup_complete:
+            # Remain in error, but do not exit the process hard; systemd will restart if needed.
             return
 
         # Signal handling
@@ -990,6 +1017,9 @@ class PLSMDaemon:
         sock.bind(CMD_SOCKET_PATH)
         sock.setblocking(False)
         logging.info("PLSM: listening on %s", CMD_SOCKET_PATH)
+
+        # Signal daemon readiness once IPC is up
+        self._emit_daemon_started()
 
         try:
             while self.running:

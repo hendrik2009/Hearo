@@ -77,6 +77,22 @@ def safe_run(cmd: Any, timeout: int = 5) -> Tuple[int, str, str]:
     except Exception as e:
         return 1, "", str(e)
 
+def send_event(event, payload=None):
+        env = {
+            "schema": "hearo.ipc/event",
+            "v": 1,
+            "id": f"evt-wsm-{int(time.time()*1000)}",
+            "ts": int(time.time()*1000),
+            "event": event,
+            "payload": payload or {},
+        }
+        data = json.dumps(env, separators=(",", ":")).encode("utf-8")
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as s:
+                s.connect("/tmp/hearo/events.sock")
+                s.send(data)
+        except OSError as e:
+            logging.warning("WSM: failed to send event %s: %s", event, e)
 
 # State / status models -------------------------------------------------------
 
@@ -531,6 +547,7 @@ class WSMDaemon:
         signal.signal(signal.SIGINT, handle_signal)
 
         self.log.info("WSM daemon started; entering main loop")
+        send_event("WSM_EVENT_DAEMON_STARTED", {})
 
         # Initial state is WSM_INIT; tick will transition appropriately.
         while self.running:

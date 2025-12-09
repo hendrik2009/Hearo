@@ -518,13 +518,26 @@ def configure_logging(verbose: bool) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="HEARO NFC Daemon (NFCD)")
-    parser.add_argument("-v", "--verbose", action="store_true", help="verbose logging")
+    parser.add_argument("-v", "--verbose", action="store_true", help="enable verbose INFO logging")
+    parser.add_argument("--debug", action="store_true", help="enable DEBUG-level logging")
     parser.add_argument("--scan-debug", action="store_true", help="log every UID read")
     args = parser.parse_args()
 
-    configure_logging(args.verbose)
+    # logging priority: --debug > --verbose > default(INFO)
+    if args.debug:
+        level = logging.DEBUG
+    elif args.verbose:
+        level = logging.INFO
+    else:
+        level = logging.INFO
 
-    daemon = NFCDaemon(verbose=args.verbose, scan_debug=args.scan_debug)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] NFCD: %(message)s",
+    )
+
+    daemon = NFCDaemon(verbose=args.verbose or args.debug,
+                       scan_debug=args.scan_debug)
     daemon.run()
 
 

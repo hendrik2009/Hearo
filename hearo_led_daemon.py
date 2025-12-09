@@ -26,6 +26,9 @@ from rpi_ws281x import PixelStrip, Color
 # ---------------------------------------------------------------------------
 
 CMD_SOCKET_PATH = "/tmp/hearo/ledd.sock"
+EVENT_SOCKET_PATH = "/tmp/hearo/events.sock"
+
+IPC_SCHEMA_EVENT = "hearo.ipc/event"
 
 TICK_HZ = 30.0
 TICK_INTERVAL = 1.0 / TICK_HZ
@@ -213,6 +216,32 @@ def compute_active_rgb(state: DaemonState, t_ms: int) -> RGB:
         int(base.g * f),
         int(base.b * f)
     )
+
+
+# ---------------------------------------------------------------------------
+# Event sender (to HCSM / shared events)
+# ---------------------------------------------------------------------------
+
+class EventSender:
+    def __init__(self, path: str):
+        self.path = path
+
+    def send_event(self, event: str, payload: Dict[str, Any]):
+        env = {
+            "schema": IPC_SCHEMA_EVENT,
+            "v": 1,
+            "id": f"evt-ledd-{now_ms()}",
+            "ts": now_ms(),
+            "event": event,
+            "payload": payload or {},
+        }
+        data = json.dumps(env, separators=(",", ":")).encode("utf-8")
+        try:
+            with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as s:
+                s.connect(self.path)
+                s.send(data)
+        except OSError as e:
+            logging.warning("LEDD: failed to send event %s: %s", event, e)
 
 
 # ---------------------------------------------------------------------------
@@ -450,6 +479,10 @@ def main():
 
     ipc = IpcServer(CMD_SOCKET_PATH)
     ipc.start()
+
+    # Send DAEMON_STARTED event for HCSM
+    sender = EventSender(EVENT_SOCKET_PATH)
+    sender.send_event("LEDD_EVENT_DAEMON_STARTED", {})
 
     last_tick = time.monotonic()
 
