@@ -81,7 +81,7 @@ SPOTIFY_API_BASE = "https://api.spotify.com/v1"
 SPOTIFY_TOKEN_ENDPOINT = "https://accounts.spotify.com/api/token"
 
 # librespot device name substring (case-insensitive)
-LIBRESPOT_DEVICE_NAME = "librespot"
+LIBRESPOT_DEVICE_NAME = "Hearo"
 
 IPC_SCHEMA_CMD = "hearo.ipc/cmd"
 IPC_SCHEMA_EVENT = "hearo.ipc/event"
@@ -1036,6 +1036,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
-
-
-
