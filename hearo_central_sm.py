@@ -44,7 +44,7 @@ from typing import Dict, Any, Optional, Set
 EVENT_SOCKET_PATH = "/tmp/hearo/events.sock"
 
 WSM_CMD_SOCKET = "/tmp/hearo/wsm.sock"
-PLSM_CMD_SOCKET = "/tmp/hearo/plsm.sock"
+PLSM_CMD_SOCKET = "/tmp/hearo/psm_cmd.sock"  # NOTE: matches plsm daemon
 
 IPC_SCHEMA_EVENT = "hearo.ipc/event"
 IPC_SCHEMA_CMD = "hearo.ipc/cmd"
@@ -310,17 +310,14 @@ class HcsmDaemon:
         if event in ("NFC_EVENT_TAG_ADDED", "NFC_EVENT_TAG_REMOVED", "BD_EVENT_BUTTON"):
             return
 
-        # Once all daemons are up, choose initial system state
+        # Once all daemons are up, choose initial system state using latched inputs
         if self._all_daemons_started():
             if self.wifi_connected:
                 if self.auth_ok:
-                    # Wi-Fi + Spotify auth already up -> ready to play
                     self._transition(HcsmState.SYS_READY_PAUSED)
                 else:
-                    # Wi-Fi but not authenticated -> offline
                     self._transition(HcsmState.SYS_OFFLINE)
             else:
-                # No Wi-Fi yet
                 self._transition(HcsmState.SYS_NO_WIFI)
 
             if not self.initiated_emitted:
