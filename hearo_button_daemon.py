@@ -1,86 +1,89 @@
 #!/usr/bin/env python3
 """
-HEARO Button Daemon (BD)
+HEARO Button Daemon (BD) – libgpiod 2.x implementation
 
-Production implementation aligned with:
-- HEARO Button Daemon (BD) V1
-- HEARO IPC Message Scheme V1.3
-- Hardware GPIO mapping (NEXT, PREV, VOL_UP, VOL_DOWN, RESET)
+- Uses GPIO pins as per Hardware_GPIO Documentation V1.2:
+    NEXT      -> GPIO17 (active-low, pull-up)
+    PREV      -> GPIO22 (active-low, pull-up)
+    VOL_UP    -> GPIO23 (active-low, pull-up)
+    VOL_DOWN  -> GPIO27 (active-low, pull-up)
+    RESET     -> GPIO24 (active-low, pull-up, ≥5 s) :contentReference[oaicite:1]{index=1}
 
-Dependencies:
-- Python 3.x
-- libgpiod 1.x (python bindings)
+- Classifies interactions according to BD spec:
+    SHORT_PRESS, LONG_PRESS, HOLD_TICK :contentReference[oaicite:2]{index=2}
 
-This daemon:
-- Reads the 5 physical buttons via libgpiod
-- Debounces edges and measures press duration
-- Classifies interactions into SHORT_PRESS / LONG_PRESS / HOLD_TICK
-- Emits BD_EVENT_* events on /tmp/hearo/events.sock
-- Listens for BD_CMD_PING / BD_CMD_SET_DEBUG on /tmp/hearo/bd.sock
+- IPC:
+    Events  -> /tmp/hearo/events.sock
+    Commands-> /tmp/hearo/bd.sock :contentReference[oaicite:3]{index=3}
+
+No extra functionality beyond the spec.
 """
 
+import argparse
+import json
+import logging
 import os
+import signal
+import socket
 import sys
 import time
-import json
-import socket
-import signal
-import logging
-import errno
-from typing import Dict, Optional, Any, List
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, Tuple
 
 import gpiod
+from gpiod.line import Direction, Bias, Value  # libgpiod 2.x enums 
+
 
 # ------------------------------
-# Configuration (defaults)
+# Global constants (from BD spec)
 # ------------------------------
 
-CHIP_NAME = "gpiochip0"
+EVENT_SOCKET_PATH = "/tmp/hearo/events.sock"
+CMD_SOCKET_PATH = "/tmp/hearo/bd.sock"
 
-# GPIO mapping (BCM) -> logical button name
-BUTTON_GPIO_MAP: Dict[int, str] = {
-    17: "NEXT",
-    22: "PREV",
-    23: "VOL_UP",
-    27: "VOL_DOWN",
-    24: "RESET",
-}
-
-# Timing thresholds (ms) – per BD spec
+# Timing (ms) :contentReference[oaicite:5]{index=5}
 DEBOUNCE_MS = 30
 SHORT_MIN_MS = 50
 LONG_THRESHOLD_MS = 800
 RESET_LONG_THRESHOLD_MS = 5000
 HOLD_TICK_INTERVAL_MS = 250
 
-# IPC sockets
-EVENT_SOCKET_PATH = "/tmp/hearo/events.sock"
-CMD_SOCKET_PATH = "/tmp/hearo/bd.sock"
+POLL_INTERVAL_MS = 10  # main loop poll period
 
-# Main loop
-POLL_INTERVAL_SEC = 0.01  # 10 ms
+# GPIO mapping (BCM) :contentReference[oaicite:6]{index=6}
+BUTTON_PINS = {
+    "NEXT": 17,
+    "PREV": 22,
+    "VOL_UP": 23,
+    "VOL_DOWN": 27,
+    "RESET": 24,
+}
 
 
 # ------------------------------
-# IPC helpers
+# Utility: time, IPC envelopes
 # ------------------------------
 
-_evt_counter = 0
+def epoch_ms() -> int:
+    return int(time.time() * 1000)
+
+
+_event_counter = 0
 _ack_counter = 0
 _res_counter = 0
 
 
-def epoch_ms() -> int:
-    return int(time.time() * 1000.0)
+def _next_event_id() -> str:
+    global _event_counter
+    _event_counter += 1
+    return f"e-bd-{_event_counter}"
 
 
 def make_event_envelope(event: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    global _evt_counter
-    _evt_counter += 1
     return {
         "schema": "hearo.ipc/event",
         "v": 1,
-        "id": f"evt-bd-{_evt_counter}",
+        "id": _next_event_id(),
         "ts": epoch_ms(),
         "event": event,
         "payload": payload,
@@ -115,11 +118,12 @@ def make_result_envelope(cmd_id: str, ok: bool, payload: Dict[str, Any]) -> Dict
     }
 
 
+# ------------------------------
+# Event sender
+# ------------------------------
+
 class EventSender:
-    """
-    Thin wrapper around a Unix datagram socket used to send events
-    to /tmp/hearo/events.sock.
-    """
+    """Thin wrapper around a Unix datagram socket used to send events."""
 
     def __init__(self, path: str) -> None:
         self.path = path
@@ -143,21 +147,20 @@ class ButtonState:
     Per-button debouncing and interaction classification.
 
     Implements states:
-      IDLE -> DEBOUNCE_PRESS -> PRESSED -> LONG_HELD -> DEBOUNCE_RELEASE -> IDLE
+      IDLE -> PRESSED -> LONG_HELD -> IDLE
+    (release debounced via stable duration)
     """
 
     STATE_IDLE = "IDLE"
-    STATE_DEBOUNCE_PRESS = "DEBOUNCE_PRESS"
     STATE_PRESSED = "PRESSED"
     STATE_LONG_HELD = "LONG_HELD"
-    STATE_DEBOUNCE_RELEASE = "DEBOUNCE_RELEASE"
 
-    def __init__(self, name: str, line: gpiod.Line, is_reset: bool = False) -> None:
+    def __init__(self, name: str, offset: int, is_reset: bool = False) -> None:
         self.name = name
-        self.line = line
+        self.offset = offset
         self.is_reset = is_reset
 
-        # raw level: 1 = released (pull-up), 0 = pressed
+        # raw logical level: 1 = released, 0 = pressed
         self.last_level = 1
         self.state = self.STATE_IDLE
 
@@ -171,34 +174,52 @@ class ButtonState:
         self.sequence_counter += 1
         return self.sequence_counter
 
-    def read_level(self) -> int:
-        try:
-            return self.line.get_value()
-        except OSError as e:
-            logging.error("BD: GPIO read failed for %s: %s", self.name, e)
-            # Treat as released on error to avoid stuck-pressed
-            return 1
+    def _emit_button_event(
+        self,
+        sender: EventSender,
+        interaction: str,
+        duration_ms: int,
+        bd_context: Dict[str, Any],
+    ) -> None:
+        seq = self._next_sequence()
+        payload = {
+            "button": self.name,
+            "interaction": interaction,
+            "duration_ms": duration_ms,
+            "sequence": seq,
+        }
+        event = make_event_envelope("BD_EVENT_BUTTON", payload)
+        sender.send(event)
+        bd_context["last_button"] = payload
+        logging.info(
+            "BD: BUTTON %s %s duration=%dms seq=%d",
+            self.name,
+            interaction,
+            duration_ms,
+            seq,
+        )
 
-    def update(self, now_ms: int, sender: EventSender, bd_context: Dict[str, Any]) -> None:
+    def update(
+        self,
+        now_ms: int,
+        current_level: int,
+        sender: EventSender,
+        bd_context: Dict[str, Any],
+    ) -> None:
         """
         Poll function called from main loop.
-        Updates internal state and emits BD_EVENT_BUTTON for:
-          - SHORT_PRESS
-          - LONG_PRESS
-          - HOLD_TICK
-        """
-        level = self.read_level()
 
-        # Edge detection with debounce (just track when level last changed)
-        if level != self.last_level:
+        current_level: 1=released, 0=pressed (logical, after mapping from gpiod.Value).
+        """
+        # Edge detection with debounce
+        if current_level != self.last_level:
             self.t_last_change_ms = now_ms
-            self.last_level = level
+            self.last_level = current_level
 
         stable_duration = now_ms - self.t_last_change_ms
 
-        # FSM
         if self.state == self.STATE_IDLE:
-            if level == 0 and stable_duration >= DEBOUNCE_MS:
+            if current_level == 0 and stable_duration >= DEBOUNCE_MS:
                 # Confirmed press
                 self.state = self.STATE_PRESSED
                 self.t_press_start_ms = now_ms
@@ -208,9 +229,11 @@ class ButtonState:
         elif self.state == self.STATE_PRESSED:
             press_duration = now_ms - self.t_press_start_ms
 
-            if level == 1 and stable_duration >= DEBOUNCE_MS:
+            if current_level == 1 and stable_duration >= DEBOUNCE_MS:
                 # Released before long threshold -> candidate SHORT_PRESS
-                if SHORT_MIN_MS <= press_duration < LONG_THRESHOLD_MS:
+                if SHORT_MIN_MS <= press_duration < (
+                    RESET_LONG_THRESHOLD_MS if self.is_reset else LONG_THRESHOLD_MS
+                ):
                     self._emit_button_event(
                         sender,
                         interaction="SHORT_PRESS",
@@ -219,18 +242,23 @@ class ButtonState:
                     )
                 # else: ignore too-short noise
                 self.state = self.STATE_IDLE
-                logging.debug("BD: %s -> IDLE (release, dur=%d ms)", self.name, press_duration)
+                logging.debug(
+                    "BD: %s -> IDLE (release, dur=%d ms)", self.name, press_duration
+                )
 
-            elif press_duration >= (RESET_LONG_THRESHOLD_MS if self.is_reset else LONG_THRESHOLD_MS):
-                # Transition into LONG_HELD
-                self.state = self.STATE_LONG_HELD
-                logging.debug("BD: %s -> LONG_HELD", self.name)
+            else:
+                threshold = (
+                    RESET_LONG_THRESHOLD_MS if self.is_reset else LONG_THRESHOLD_MS
+                )
+                if press_duration >= threshold:
+                    self.state = self.STATE_LONG_HELD
+                    logging.debug("BD: %s -> LONG_HELD", self.name)
 
         elif self.state == self.STATE_LONG_HELD:
             press_duration = now_ms - self.t_press_start_ms
 
             # HOLD_TICKs while still pressed
-            if level == 0:
+            if current_level == 0:
                 if now_ms - self.t_last_hold_tick_ms >= HOLD_TICK_INTERVAL_MS:
                     self.t_last_hold_tick_ms = now_ms
                     self._emit_button_event(
@@ -240,8 +268,10 @@ class ButtonState:
                         bd_context=bd_context,
                     )
             # Release after long hold -> LONG_PRESS
-            elif level == 1 and stable_duration >= DEBOUNCE_MS:
-                threshold = RESET_LONG_THRESHOLD_MS if self.is_reset else LONG_THRESHOLD_MS
+            elif current_level == 1 and stable_duration >= DEBOUNCE_MS:
+                threshold = (
+                    RESET_LONG_THRESHOLD_MS if self.is_reset else LONG_THRESHOLD_MS
+                )
                 if press_duration >= threshold:
                     self._emit_button_event(
                         sender,
@@ -265,35 +295,6 @@ class ButtonState:
                     press_duration,
                 )
 
-        # No explicit DEBOUNCE_RELEASE state: debouncing is done via stable_duration checks.
-
-    def _emit_button_event(
-        self,
-        sender: EventSender,
-        interaction: str,
-        duration_ms: int,
-        bd_context: Dict[str, Any],
-    ) -> None:
-        seq = self._next_sequence()
-        payload = {
-            "button": self.name,
-            "interaction": interaction,
-            "duration_ms": int(duration_ms),
-            "sequence": seq,
-        }
-        env = make_event_envelope("BD_EVENT_BUTTON", payload)
-        sender.send(env)
-
-        # Update BD context for BD_CMD_PING
-        bd_context["last_button"] = payload
-        logging.info(
-            "BD: %s %s (dur=%d ms, seq=%d)",
-            self.name,
-            interaction,
-            duration_ms,
-            seq,
-        )
-
 
 # ------------------------------
 # Command server
@@ -301,149 +302,183 @@ class ButtonState:
 
 class CommandServer:
     """
-    Unix datagram command server bound to CMD_SOCKET_PATH.
-
-    Expects "hearo.ipc/cmd" envelopes with:
-      cmd: "BD_CMD_PING" or "BD_CMD_SET_DEBUG"
+    Listens on /tmp/hearo/bd.sock for JSON IPC commands and replies via
+    caller-provided reply sockets, strictly following BD spec. 
     """
 
-    def __init__(self, path: str, sender: EventSender, bd_context: Dict[str, Any]) -> None:
+    def __init__(self, path: str, sender: EventSender, ctx: Dict[str, Any]) -> None:
         self.path = path
         self.sender = sender
-        self.bd_context = bd_context
+        self.ctx = ctx
 
-        # Remove stale socket file if present
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+
+        # Remove stale socket
         try:
-            os.unlink(self.path)
+            os.unlink(path)
         except FileNotFoundError:
             pass
-        except OSError as e:
-            logging.error("BD: failed to unlink existing cmd socket %s: %s", self.path, e)
 
         self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
         self.sock.bind(self.path)
-
-    def fileno(self) -> int:
-        return self.sock.fileno()
+        self.sock.settimeout(0.1)
 
     def close(self) -> None:
         try:
             self.sock.close()
-        finally:
-            try:
-                os.unlink(self.path)
-            except FileNotFoundError:
-                pass
-
-    def handle_one(self) -> None:
+        except Exception:
+            pass
         try:
-            data, addr = self.sock.recvfrom(4096)
-        except OSError as e:
-            if e.errno != errno.EINTR:
-                logging.error("BD: error reading cmd socket: %s", e)
-            return
+            os.unlink(self.path)
+        except FileNotFoundError:
+            pass
 
-        try:
-            msg = json.loads(data.decode("utf-8"))
-        except Exception as e:
-            logging.warning("BD: invalid JSON on cmd socket: %s", e)
-            return
-
-        schema = msg.get("schema")
-        if schema != "hearo.ipc/cmd":
-            logging.warning("BD: ignoring non-cmd schema: %r", schema)
-            return
-
-        cmd_id = msg.get("id") or "cmd-unknown"
-        cmd = msg.get("cmd")
-        payload = msg.get("payload") or {}
-        reply_path = msg.get("reply")
-
-        if not reply_path:
-            logging.warning("BD: cmd without reply path (id=%s)", cmd_id)
-            return
-
-        if cmd == "BD_CMD_PING":
-            self._handle_ping(cmd_id, reply_path)
-        elif cmd == "BD_CMD_SET_DEBUG":
-            self._handle_set_debug(cmd_id, payload, reply_path)
-        else:
-            self._send_unknown_cmd(cmd_id, reply_path, cmd)
-
-    def _send_ipc(self, path: str, msg: Dict[str, Any]) -> None:
+    def _send_reply(self, reply_path: str, msg: Dict[str, Any]) -> None:
         data = json.dumps(msg, separators=(",", ":")).encode("utf-8")
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM) as s:
-                s.connect(path)
+                s.connect(reply_path)
                 s.send(data)
         except OSError as e:
-            logging.error("BD: failed to send cmd response to %s: %s", path, e)
+            logging.warning("BD: failed to send reply to %s: %s", reply_path, e)
 
-    def _handle_ping(self, cmd_id: str, reply_path: str) -> None:
-        # ACK
+    def _handle_cmd_ping(self, cmd: Dict[str, Any], reply: str) -> None:
+        cmd_id = cmd.get("id", "")
         ack = make_ack_envelope(cmd_id, ok=True, error=None)
-        self._send_ipc(reply_path, ack)
+        self._send_reply(reply, ack)
 
-        # RESULT
-        uptime_ms = int((time.monotonic() - self.bd_context["t_start_monotonic"]) * 1000)
         result_payload = {
-            "ok": True,
-            "payload": {
-                "status": self.bd_context.get("status", "ready"),
-                "last_button": self.bd_context.get("last_button"),
-                "last_error_code": self.bd_context.get("last_error_code"),
-                "uptime_ms": uptime_ms,
-            },
+            "status": self.ctx.get("status", "ready"),
+            "last_button": self.ctx.get("last_button"),
+            "last_error_code": self.ctx.get("last_error_code"),
+            "uptime_ms": epoch_ms() - self.ctx.get("start_time_ms", epoch_ms()),
         }
         res = make_result_envelope(cmd_id, ok=True, payload=result_payload)
-        self._send_ipc(reply_path, res)
+        self._send_reply(reply, res)
 
-    def _handle_set_debug(self, cmd_id: str, payload: Dict[str, Any], reply_path: str) -> None:
-        level_str = str(payload.get("level", "")).lower()
+    def _handle_cmd_set_debug(self, cmd: Dict[str, Any], reply: str) -> None:
+        cmd_id = cmd.get("id", "")
+        level = cmd.get("payload", {}).get("level")
         mapping = {
-            "none": logging.CRITICAL + 1,
+            "none": logging.CRITICAL,
             "error": logging.ERROR,
             "warn": logging.WARNING,
-            "warning": logging.WARNING,
             "info": logging.INFO,
             "debug": logging.DEBUG,
         }
-        level = mapping.get(level_str)
-        ok = level is not None
+        if level not in mapping:
+            ack = make_ack_envelope(cmd_id, ok=False, error="INVALID_LEVEL")
+            self._send_reply(reply, ack)
+            return
 
-        if ok:
-            logging.getLogger().setLevel(level)
-            logging.info("BD: log level set to %s", level_str)
-            error = None
+        logging.getLogger().setLevel(mapping[level])
+        ack = make_ack_envelope(cmd_id, ok=True, error=None)
+        self._send_reply(reply, ack)
+
+        res = make_result_envelope(cmd_id, ok=True, payload={"level": level})
+        self._send_reply(reply, res)
+
+    def poll(self) -> None:
+        try:
+            data, _addr = self.sock.recvfrom(4096)
+        except socket.timeout:
+            return
+        except OSError as e:
+            logging.error("BD: command socket error: %s", e)
+            self.ctx["last_error_code"] = "CMD_SOCKET_ERROR"
+            return
+
+        try:
+            cmd = json.loads(data.decode("utf-8"))
+        except json.JSONDecodeError:
+            logging.warning("BD: received invalid JSON on cmd socket")
+            return
+
+        if cmd.get("schema") != "hearo.ipc/cmd":
+            logging.warning("BD: ignoring non-cmd message")
+            return
+
+        reply = cmd.get("reply")
+        if not reply:
+            logging.warning("BD: cmd without reply path")
+            return
+
+        name = cmd.get("cmd")
+        if name == "BD_CMD_PING":
+            self._handle_cmd_ping(cmd, reply)
+        elif name == "BD_CMD_SET_DEBUG":
+            self._handle_cmd_set_debug(cmd, reply)
         else:
-            error = f"invalid level '{level_str}'"
+            cmd_id = cmd.get("id", "")
+            ack = make_ack_envelope(cmd_id, ok=False, error="UNKNOWN_COMMAND")
+            self._send_reply(reply, ack)
 
-        ack = make_ack_envelope(cmd_id, ok=ok, error=error)
-        self._send_ipc(reply_path, ack)
 
-        result_payload = {
-            "ok": ok,
-            "payload": {
-                "applied_level": level_str if ok else None,
-                "error": error,
-            },
-        }
-        res = make_result_envelope(cmd_id, ok=ok, payload=result_payload)
-        self._send_ipc(reply_path, res)
+# ------------------------------
+# libgpiod 2.x GPIO wrapper
+# ------------------------------
 
-    def _send_unknown_cmd(self, cmd_id: str, reply_path: str, cmd: Any) -> None:
-        error = f"unknown command '{cmd}'"
-        ack = make_ack_envelope(cmd_id, ok=False, error=error)
-        self._send_ipc(reply_path, ack)
+@dataclass
+class GpioRequest:
+    request: gpiod.LineRequest
+    idx_map: Dict[str, int]  # button name -> index in get_values() list
 
-        result_payload = {
-            "ok": False,
-            "payload": {
-                "error": error,
-            },
-        }
-        res = make_result_envelope(cmd_id, ok=False, payload=result_payload)
-        self._send_ipc(reply_path, res)
+
+def setup_gpio() -> GpioRequest:
+    """
+    Request all button lines as inputs with pull-up, active_low=True,
+    using libgpiod 2.x request_lines API.
+    """
+    chip_path = "/dev/gpiochip0"
+
+    # fixed order of offsets for the request
+    offsets_order = list(BUTTON_PINS.values())
+
+    settings = gpiod.LineSettings(
+        direction=Direction.INPUT,
+        bias=Bias.PULL_UP,
+        active_low=True,
+    )
+
+    config = {
+        tuple(offsets_order): settings,
+    }
+
+    req = gpiod.request_lines(
+        chip_path,
+        consumer="hearo-bd",
+        config=config,
+    )
+
+    # map button name -> index in returned list
+    idx_map: Dict[str, int] = {}
+    for name, offset in BUTTON_PINS.items():
+        idx_map[name] = offsets_order.index(offset)
+
+    return GpioRequest(request=req, idx_map=idx_map)
+
+
+def read_button_levels(gpio_req: GpioRequest) -> Dict[str, int]:
+    """
+    Read all button lines and convert to:
+        1 = released
+        0 = pressed
+    """
+    try:
+        raw = gpio_req.request.get_values()  # list[Value]
+    except OSError as e:
+        logging.error("BD: GPIO get_values failed: %s", e)
+        return {name: 1 for name in BUTTON_PINS.keys()}
+
+    levels: Dict[str, int] = {}
+    for name, idx in gpio_req.idx_map.items():
+        try:
+            v = raw[idx]
+        except IndexError:
+            v = Value.INACTIVE
+        levels[name] = 0 if v == Value.ACTIVE else 1
+    return levels
 
 
 # ------------------------------
@@ -451,162 +486,131 @@ class CommandServer:
 # ------------------------------
 
 class ButtonDaemon:
-    def __init__(self) -> None:
-        self.event_sender = EventSender(EVENT_SOCKET_PATH)
-        self.bd_context: Dict[str, Any] = {
+    def __init__(self, debug: bool = False) -> None:
+        self.debug = debug
+        self.sender = EventSender(EVENT_SOCKET_PATH)
+        self.ctx: Dict[str, Any] = {
             "status": "init",
             "last_button": None,
             "last_error_code": None,
-            "t_start_monotonic": time.monotonic(),
+            "start_time_ms": epoch_ms(),
         }
 
-        self.chip: Optional[gpiod.Chip] = None
-        self.buttons: List[ButtonState] = []
         self.cmd_server: Optional[CommandServer] = None
-        self.running = True
+        self.gpio_req: Optional[GpioRequest] = None
+        self.buttons: Dict[str, ButtonState] = {}
 
-    # --- setup/teardown ---
+        self._stopping = False
 
     def setup(self) -> None:
-        # Setup GPIO chip and button lines
-        try:
-            self.chip = gpiod.Chip(CHIP_NAME)
-        except OSError as e:
-            self._report_error("GPIO_INIT_FAILED", f"chip open failed: {e}", recovering=False)
-            raise SystemExit(1)
+        # IPC command server
+        self.cmd_server = CommandServer(CMD_SOCKET_PATH, self.sender, self.ctx)
 
+        # GPIO
         try:
-            for gpio, logical_name in BUTTON_GPIO_MAP.items():
-                line = self.chip.get_line(gpio)
-                line.request(
-                    consumer=f"bd-{logical_name.lower()}",
-                    type=gpiod.LINE_REQ_DIR_IN,
-                    flags=gpiod.LINE_REQ_FLAG_BIAS_PULL_UP,
-                )
-                self.buttons.append(
-                    ButtonState(
-                        name=logical_name,
-                        line=line,
-                        is_reset=(logical_name == "RESET"),
-                    )
-                )
-                logging.info("BD: configured button %s on GPIO%d", logical_name, gpio)
-        except OSError as e:
-            self._report_error("GPIO_INIT_FAILED", f"line request failed: {e}", recovering=False)
-            raise SystemExit(1)
+            self.gpio_req = setup_gpio()
+        except Exception as e:
+            logging.error("BD: failed to set up GPIO: %s", e)
+            self.ctx["last_error_code"] = "GPIO_INIT_FAILED"
+            self.ctx["status"] = "error"
+            err_evt = make_event_envelope(
+                "BD_EVENT_ERROR",
+                {"code": "GPIO_INIT_FAILED", "message": str(e)},
+            )
+            self.sender.send(err_evt)
+            raise
 
-        # Setup command server
-        self.cmd_server = CommandServer(CMD_SOCKET_PATH, self.event_sender, self.bd_context)
+        # Button state objects – use BUTTON_PINS for offsets
+        for name, offset in BUTTON_PINS.items():
+            self.buttons[name] = ButtonState(
+                name=name,
+                offset=offset,
+                is_reset=(name == "RESET"),
+            )
+
+        self.ctx["status"] = "ready"
 
         # Emit DAEMON_STARTED
-        started_payload = {
-            "version": "1.0",
-            "pid": os.getpid(),
-        }
-        self.event_sender.send(make_event_envelope("BD_EVENT_DAEMON_STARTED", started_payload))
+        started_evt = make_event_envelope("BD_EVENT_DAEMON_STARTED", {})
+        self.sender.send(started_evt)
+        logging.info("BD: daemon started")
 
-        self.bd_context["status"] = "ready"
-        logging.info("BD: daemon started, status=ready")
-
-    def teardown(self, reason: str) -> None:
-        logging.info("BD: shutting down (%s)", reason)
-
-        try:
-            stopped_payload = {
-                "reason": reason,
-                "pid": os.getpid(),
-            }
-            self.event_sender.send(make_event_envelope("BD_EVENT_DAEMON_STOPPED", stopped_payload))
-        except Exception:
-            pass
-
-        if self.cmd_server is not None:
-            self.cmd_server.close()
-
-        for btn in self.buttons:
-            try:
-                btn.line.release()
-            except Exception:
-                pass
-
-        if self.chip is not None:
-            try:
-                self.chip.close()
-            except Exception:
-                pass
-
-    def _report_error(self, code: str, message: str, recovering: bool) -> None:
-        self.bd_context["status"] = "error"
-        self.bd_context["last_error_code"] = code
-        payload = {
-            "code": code,
-            "message": message,
-            "recovering": bool(recovering),
-        }
-        self.event_sender.send(make_event_envelope("BD_EVENT_ERROR", payload))
-        logging.error("BD: error %s (recovering=%s): %s", code, recovering, message)
-
-    # --- main loop ---
+    def stop(self) -> None:
+        self._stopping = True
 
     def run(self) -> None:
-        import select
-
         self.setup()
 
-        # Signal handling
-        def handle_signal(signum, frame):
-            logging.info("BD: received signal %s, stopping", signum)
-            self.running = False
-
-        signal.signal(signal.SIGINT, handle_signal)
-        signal.signal(signal.SIGTERM, handle_signal)
+        assert self.cmd_server is not None
+        assert self.gpio_req is not None
 
         try:
-            while self.running:
-                now_ms = epoch_ms()
+            while not self._stopping:
+                now = epoch_ms()
 
-                # Update buttons
-                for btn in self.buttons:
-                    btn.update(now_ms, self.event_sender, self.bd_context)
+                # Read all button levels
+                levels = read_button_levels(self.gpio_req)
 
-                # Handle commands (non-blocking wait with timeout = POLL_INTERVAL_SEC)
-                if self.cmd_server is not None:
-                    rlist, _, _ = select.select(
-                        [self.cmd_server.fileno()],
-                        [],
-                        [],
-                        POLL_INTERVAL_SEC,
-                    )
-                    if rlist:
-                        self.cmd_server.handle_one()
-                else:
-                    time.sleep(POLL_INTERVAL_SEC)
+                # Update per-button FSM
+                for name, button in self.buttons.items():
+                    level = levels.get(name, 1)
+                    button.update(now, level, self.sender, self.ctx)
 
-        except Exception as e:
-            self._report_error("INTERNAL_EXCEPTION", str(e), recovering=False)
-            raise
+                # Handle commands
+                self.cmd_server.poll()
+
+                time.sleep(POLL_INTERVAL_MS / 1000.0)
         finally:
-            self.teardown(reason="signal" if not self.running else "exception")
+            # Emit DAEMON_STOPPED
+            stopped_evt = make_event_envelope("BD_EVENT_DAEMON_STOPPED", {})
+            self.sender.send(stopped_evt)
+            logging.info("BD: daemon stopping")
+
+            if self.cmd_server:
+                self.cmd_server.close()
+
+            if self.gpio_req:
+                try:
+                    self.gpio_req.request.release()
+                except Exception:
+                    pass
 
 
 # ------------------------------
 # Entry point
 # ------------------------------
 
-def configure_logging() -> None:
-    level = logging.INFO
-    if "-v" in sys.argv or "--verbose" in sys.argv or "--debug" in sys.argv:
-        level = logging.DEBUG
+def main() -> None:
+    parser = argparse.ArgumentParser(description="HEARO Button Daemon (libgpiod 2.x)")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug logging",
+    )
+    args = parser.parse_args()
+
+    log_level = logging.DEBUG if args.debug else logging.INFO
     logging.basicConfig(
-            level=level,
-            format="%(asctime)s [%(levelname)s] bd: %(message)s",
+        level=log_level,
+        format="%(asctime)s [%(levelname)s] %(message)s",
     )
 
+    daemon = ButtonDaemon(debug=args.debug)
 
-def main() -> None:
-    configure_logging()
-    daemon = ButtonDaemon()
-    daemon.run()
+    def handle_signal(signum, frame):
+        logging.info("BD: received signal %s, stopping", signum)
+        daemon.stop()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    try:
+        daemon.run()
+    except KeyboardInterrupt:
+        daemon.stop()
+    except Exception as e:
+        logging.exception("BD: fatal error: %s", e)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
